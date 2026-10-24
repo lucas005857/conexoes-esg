@@ -2,6 +2,11 @@
    CONEXÕES ESG · configuração (ARQUIVO DE EXEMPLO)
    InovaHACK SENAI Porto 2026 — desafio AEVO
 
+   SÓ PARA TESTAR NO SEU COMPUTADOR. No site publicado, as chaves
+   ficam nas variáveis de ambiente da Netlify (GEMINI_API_KEY e
+   GROQ_API_KEY) e são lidas por netlify/functions/ia.js. Não
+   publique um config.js com chaves: quem abrir a página as vê.
+
    COMO USAR:
      1. Copie este arquivo para "config.js" (na mesma pasta).
      2. Cole suas próprias chaves nas listas abaixo.
@@ -12,8 +17,8 @@
      Gemini → aistudio.google.com/apikey
      Groq   → console.groq.com/keys
 
-   Sem nenhuma chave o app continua funcionando: ele cai
-   sozinho na triagem local (motor-local.js).
+   Sem config.js, o app tenta a função da Netlify. Se ela não
+   existir ou falhar, cai sozinho na triagem local (motor-local.js).
    ========================================================== */
 
 const CONFIG = {
