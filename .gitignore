@@ -1,0 +1,9 @@
+# Chaves de API: copie config.example.js para config.js e cole as suas
+config.js
+.env
+.env.*
+
+# Arquivos de sistema/editor
+.DS_Store
+Thumbs.db
+node_modules/
