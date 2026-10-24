@@ -2,7 +2,7 @@
 
 MVP do **InovaHACK SENAI Porto 2026** (10 a 13/08/2026), desafio "Copiloto ESG" da AEVO: um chatbot que recebe ideias de colaboradores, classifica entre Ambiental, Social e Governança e devolve um plano de ação com indicadores, riscos e ROI.
 
-**Demo online:** https://aevosenai.netlify.app/ (fora do ar no momento; em correção)
+**Demo online:** https://aevosenai.netlify.app/
 
 ## O problema
 A AEVO recebe mais ideias de melhoria de colaboradores do que a equipe consegue analisar à mão. A solução automatiza a triagem: indica se a ideia é viável e se está dentro dos parâmetros ESG, economizando tempo da empresa.
