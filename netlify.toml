@@ -1,6 +1,7 @@
 # Conexões ESG — InovaHACK SENAI Porto 2026
 [build]
   publish = "."
+  functions = "netlify/functions"
 
 [[headers]]
   for = "/*"

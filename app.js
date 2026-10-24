@@ -3,13 +3,14 @@
    InovaHACK SENAI Porto 2026 — desafio AEVO
 
    Três caminhos de análise, nesta ordem de preferência:
-     1. função Netlify  — chave no servidor, nada exposto
-     2. chave na sessão — digitada na hora, só na memória da aba
+     1. função Netlify  — netlify/functions/ia.js; as chaves ficam nas
+                          variáveis de ambiente da Netlify, nada exposto
+     2. config.js       — chaves locais (só para testar na sua máquina);
+                          chama o Gemini e a Groq direto do navegador
      3. triagem local   — motor-local.js, sem internet
 
-   Nenhum arquivo deste projeto contém chave de API. Se a demo
-   for numa máquina só, use o caminho 2: a chave é digitada no
-   momento e some quando a aba fecha.
+   Nenhum arquivo deste repositório contém chave de API. O config.js é
+   opcional e fica no .gitignore.
    ========================================================== */
 
 /* ---------- 1. DEPÓSITO -------------------------------------------
@@ -139,6 +140,24 @@ const LIMITE_MS = 5000;
    durante a apresentação, previsível vale mais que perfeito. */
 let iaIndisponivel = false;
 
+/* Configuração: o config.js é OPCIONAL. Sem ele (site publicado), as chaves
+   ficam no servidor e o app chama a função da Netlify. Com ele, funciona como
+   antes, chamando o Gemini e a Groq direto do navegador. */
+const CFG = Object.assign({
+  GEMINI_API_KEYS: [], GEMINI_MODELO: 'gemini-flash-latest',
+  GROQ_API_KEYS: [],   GROQ_MODELO: 'openai/gpt-oss-120b',
+  ORDEM: ['groq', 'gemini']
+}, (typeof CONFIG !== 'undefined' && CONFIG) || {});
+
+const VIA_FUNCAO = '__funcao__';
+function chamarFuncao(motor, corpo, signal){
+  return fetch('/.netlify/functions/ia', {
+    method: 'POST', signal,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ motor, corpo })
+  });
+}
+
 function marcarIaIndisponivel(){
   if (!iaIndisponivel){
     iaIndisponivel = true;
@@ -157,13 +176,13 @@ function comTempoLimite(ms){
    Só faz sentido se as chaves forem de CONTAS diferentes — a cota do
    Gemini é por conta, não por chave. */
 function chavesDe(nomeMotor){
-  const lista = nomeMotor === 'gemini' ? CONFIG.GEMINI_API_KEYS : CONFIG.GROQ_API_KEYS;
-  return (Array.isArray(lista) ? lista : []).filter(c => typeof c === 'string' && c.trim());
+  const lista = nomeMotor === 'gemini' ? CFG.GEMINI_API_KEYS : CFG.GROQ_API_KEYS;
+  const locais = (Array.isArray(lista) ? lista : []).filter(c => typeof c === 'string' && c.trim());
+  return locais.length ? locais : [VIA_FUNCAO];
 }
 
 async function tentarComCadaChave(nomeMotor, fn, arg){
   const chaves = chavesDe(nomeMotor);
-  if (!chaves.length) throw new Error('sem chave do ' + nomeMotor);
   let ultimoErro;
   for (const chave of chaves){
     try {
@@ -181,16 +200,17 @@ async function analisarComGemini(texto, chave){
   const t = comTempoLimite(LIMITE_MS);
   let r;
   try {
-    r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.GEMINI_MODELO}:generateContent`,
+    const corpo = {
+      systemInstruction:{ parts:[{ text: INSTRUCAO }] },
+      contents:[{ parts:[{ text:'Ideia do colaborador:\n\n' + texto }] }],
+      generationConfig:{ temperature:0.3, responseMimeType:'application/json', maxOutputTokens:900 }
+    };
+    r = chave === VIA_FUNCAO ? await chamarFuncao('gemini', corpo, t.signal) : await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${CFG.GEMINI_MODELO}:generateContent`,
       {
         method:'POST', signal: t.signal,
         headers:{ 'Content-Type':'application/json', 'X-goog-api-key': chave },
-        body: JSON.stringify({
-          systemInstruction:{ parts:[{ text: INSTRUCAO }] },
-          contents:[{ parts:[{ text:'Ideia do colaborador:\n\n' + texto }] }],
-          generationConfig:{ temperature:0.3, responseMimeType:'application/json', maxOutputTokens:900 }
-        })
+        body: JSON.stringify(corpo)
       }
     );
   } finally { t.pronto(); }
@@ -206,18 +226,19 @@ async function analisarComGroq(texto, chave){
   const t = comTempoLimite(LIMITE_MS);
   let r;
   try {
-    r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method:'POST', signal: t.signal,
-    headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + chave },
-    body: JSON.stringify({
-      model: CONFIG.GROQ_MODELO,
+    const corpo = {
+      model: CFG.GROQ_MODELO,
       temperature:0.3, max_tokens:1200,
       response_format:{ type:'json_object' },
       messages:[
         { role:'system', content: INSTRUCAO },
         { role:'user', content:'Ideia do colaborador:\n\n' + texto }
       ]
-    })
+    };
+    r = chave === VIA_FUNCAO ? await chamarFuncao('groq', corpo, t.signal) : await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method:'POST', signal: t.signal,
+      headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + chave },
+      body: JSON.stringify(corpo)
     });
   } finally { t.pronto(); }
   if (!r.ok) throw new Error('Groq respondeu ' + r.status);
@@ -236,15 +257,16 @@ async function perguntarGemini(prompt, chave){
   const t = comTempoLimite(LIMITE_PERGUNTA_MS);
   let r;
   try {
-    r = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.GEMINI_MODELO}:generateContent`,
+    const corpo = {
+      contents:[{ parts:[{ text: prompt }] }],
+      generationConfig:{ temperature:0.5, maxOutputTokens:80 }
+    };
+    r = chave === VIA_FUNCAO ? await chamarFuncao('gemini', corpo, t.signal) : await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${CFG.GEMINI_MODELO}:generateContent`,
       {
         method:'POST', signal: t.signal,
         headers:{ 'Content-Type':'application/json', 'X-goog-api-key': chave },
-        body: JSON.stringify({
-          contents:[{ parts:[{ text: prompt }] }],
-          generationConfig:{ temperature:0.5, maxOutputTokens:80 }
-        })
+        body: JSON.stringify(corpo)
       }
     );
   } finally { t.pronto(); }
@@ -259,14 +281,15 @@ async function perguntarGroq(prompt, chave){
   const t = comTempoLimite(LIMITE_PERGUNTA_MS);
   let r;
   try {
-    r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const corpo = {
+      model: CFG.GROQ_MODELO,
+      temperature:0.5, max_tokens:80,
+      messages:[{ role:'user', content: prompt }]
+    };
+    r = chave === VIA_FUNCAO ? await chamarFuncao('groq', corpo, t.signal) : await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method:'POST', signal: t.signal,
       headers:{ 'Content-Type':'application/json', Authorization:'Bearer ' + chave },
-      body: JSON.stringify({
-        model: CONFIG.GROQ_MODELO,
-        temperature:0.5, max_tokens:80,
-        messages:[{ role:'user', content: prompt }]
-      })
+      body: JSON.stringify(corpo)
     });
   } finally { t.pronto(); }
   if (!r.ok) throw new Error('Groq respondeu ' + r.status);
@@ -338,7 +361,7 @@ Gere UMA pergunta curta de acompanhamento, específica pra essa ideia. Antes de 
   if (iaIndisponivel) return null;
 
   const tentativas = { gemini: perguntarGemini, groq: perguntarGroq };
-  for (const nome of (CONFIG.ORDEM || [])){
+  for (const nome of (CFG.ORDEM || [])){
     const fn = tentativas[nome];
     if (!fn) continue;
     try {
@@ -394,7 +417,7 @@ function normalizar(a){
 async function analisarIdeia(texto){
   if (!iaIndisponivel){
     const tentativas = { gemini: analisarComGemini, groq: analisarComGroq };
-    for (const nome of (CONFIG.ORDEM || [])){
+    for (const nome of (CFG.ORDEM || [])){
       const fn = tentativas[nome];
       if (!fn) continue;
       try {
