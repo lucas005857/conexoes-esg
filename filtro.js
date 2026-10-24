@@ -50,7 +50,7 @@ const META = [
   { teste: /\b(o que voce (faz|foi treinad|pode fazer|sabe fazer)|p(a)?ra que (voce )?serve|qual (e |eh )?(a )?sua funcao|o que (e|eh) (isso|esse (site|app|sistema))|como (voce |eu )?(funciona|usa|uso|utilizo)|quem (e|eh) voce|voce (e|eh) (uma |um )?(ia|robo|bot|maquina))/,
     resposta: 'Sou o copiloto da equipe Conexões ESG. Leio a ideia que um colaborador escreve com as próprias palavras e mostro a que dimensões de sustentabilidade ela se conecta — Ambiental, Social ou Governança. Explico por que se conecta, aponto o que dá para medir e listo os próximos passos para a ideia virar projeto.\n\nPode me contar uma ideia agora.' },
 
-  { teste: /\b(que (ia|modelo|tecnologia|inteligencia)|qual (ia|modelo|tecnologia)|voce (usa|roda) (qual|que|com)|voce (e|eh) o (chatgpt|gpt|gemini)|como (e|eh) feito|tem internet|precisa de internet)/,
+  { teste: /\b(que (ia|modelo|tecnologia|inteligencia)|qual (ia|modelo|tecnologia)|voce (usa|roda) (qual|que|com)|voce (e|eh) o (chatgpt|gpt|gemini|claude)|como (e|eh) feito|tem internet|precisa de internet)/,
     resposta: 'Uso o Gemini para analisar o texto. Se a internet ou a API falhar, passo sozinho para uma triagem local que roda aqui no navegador, com um dicionário de chão de fábrica — assim a análise sai de qualquer jeito. A ficha mostra qual dos dois respondeu.' },
 
   { teste: /\b(quem (te |os |as )?(criou|fez|desenvolveu|programou|construiu)|quem sao voces|de quem (e|eh)|qual (e |eh )?(a )?equipe)/,
